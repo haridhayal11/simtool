@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Simulation build artifacts
+build/
+sim_build/
+obj_dir/
+
+# Waveform files
+*.vcd
+*.fst
+*.ghw
+*.wlf
+
+# SystemC build artifacts
+*.o
+*.a
+*.so
+*.dylib
+
+# Coverage files
+*.cov
+coverage_*
+cov_*
+
+# Verilator generated files
+V*.cpp
+V*.h
+V*.mk
+V*.d
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp

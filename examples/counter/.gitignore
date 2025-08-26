@@ -1,0 +1,28 @@
+# SimTool project build artifacts
+build/
+sim_build/
+
+# Waveform files (usually don't commit these)
+*.vcd
+*.fst
+*.ghw
+
+# Verilator generated files
+obj_dir/
+V*.cpp
+V*.h
+V*.mk
+V*.d
+
+# Cocotb generated files
+results.xml
+sim.vvp
+
+# Log files
+*.log
+
+# Coverage files
+*.cov
+
+# Temporary files
+*.tmp
