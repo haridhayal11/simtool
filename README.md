@@ -14,7 +14,15 @@ A CLI tool that bridges ModelSim workflows to open-source simulation tools like 
 ## Installation
 
 ```bash
+# Clone and setup
+git clone <repository-url>
 cd simtool
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install SimTool
 pip install -e .
 ```
 
@@ -53,7 +61,7 @@ project/
 ├── tb/
 │   ├── cocotb/    # Python testbenches  
 │   └── sv/        # SystemVerilog testbenches
-├── build/         # Build artifacts
+├── work/          # Build artifacts (like ModelSim work library)
 ├── scripts/       # Utility scripts
 └── simtool.cfg    # Project configuration
 ```
@@ -133,7 +141,7 @@ rtl_paths:
 tb_paths:
   - tb/cocotb
   - tb/sv
-build_dir: build
+build_dir: work
 include_paths:
   - include
 defines:
@@ -171,6 +179,12 @@ This automatically:
 | `vlog *.sv` | `simtool vlog *.sv` |
 | `vsim -voptargs=+acc top` | `simtool sim top --waves` |
 | ModelSim GUI | `simtool sim top --gui` (uses GTKWave) |
+
+**Key Improvements:**
+- Creates familiar `work/` directory like ModelSim work library
+- Automatic testbench type detection (cocotb vs SystemVerilog)
+- Integrated GTKWave waveform viewing
+- Cross-platform support (Linux & macOS)
 
 ## Development
 

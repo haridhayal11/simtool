@@ -8,12 +8,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
     name="simtool",
     version="0.1.0",
-    author="Hardware Engineer",
-    author_email="user@example.com",
+    author="Haridhayal Maheswaran",
+    author_email="haridhayal@gmail.com",
     description="A CLI tool to bridge ModelSim workflows to open-source simulation tools",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/user/simtool",
+    url="https://github.com/haridhayal11/simtool",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
