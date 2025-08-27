@@ -37,22 +37,22 @@ class Colors:
 
 def success(text: str) -> str:
     """Format success message."""
-    return f"{Colors.SUCCESS}✓ {text}{Colors.RESET}"
+    return f"{Colors.SUCCESS}{text}{Colors.RESET}"
 
 
 def error(text: str) -> str:
     """Format error message."""
-    return f"{Colors.ERROR}✗ {text}{Colors.RESET}"
+    return f"{Colors.ERROR}{text}{Colors.RESET}"
 
 
 def warning(text: str) -> str:
     """Format warning message."""
-    return f"{Colors.WARNING}⚠ {text}{Colors.RESET}"
+    return f"{Colors.WARNING}{text}{Colors.RESET}"
 
 
 def info(text: str) -> str:
     """Format info message."""
-    return f"{Colors.INFO}ℹ {text}{Colors.RESET}"
+    return f"{Colors.INFO}{text}{Colors.RESET}"
 
 
 def command(text: str) -> str:
@@ -82,4 +82,4 @@ def header(text: str) -> str:
 
 def progress(text: str) -> str:
     """Format progress text."""
-    return f"{Colors.CYAN}→ {text}{Colors.RESET}"
+    return f"{Colors.CYAN}> {text}{Colors.RESET}"

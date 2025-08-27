@@ -92,3 +92,18 @@ V*.d
 # Temporary files
 *.tmp
 *.temp
+
+# SimTool specific
+.simtool_preferences.json
+work/
+sim_build*/
+
+# Test artifacts
+test_*.py
+debug_*
+
+# Packaging
+build/
+dist/
+*.egg-info/
+packaging_env/

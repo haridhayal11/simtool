@@ -24,7 +24,7 @@ def sample_config():
         'default_simulator': 'verilator',
         'default_waves': True,
         'rtl_paths': ['rtl'],
-        'tb_paths': ['tb/cocotb', 'tb/sv'],
+        'tb_paths': ['tb'],
         'build_dir': 'work',
         'include_paths': [],
         'defines': {},

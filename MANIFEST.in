@@ -1,0 +1,30 @@
+# Include configuration and documentation files
+include README.md
+include LICENSE
+include pyproject.toml
+include MANIFEST.in
+
+# Include all source files
+recursive-include src *.py
+recursive-include src *.sv
+recursive-include src *.cpp
+
+# Include examples
+recursive-include examples *.sv
+recursive-include examples *.py
+recursive-include examples *.cpp
+recursive-include examples *.cfg
+
+# Include tests
+recursive-include tests *.py
+
+# Exclude development files
+exclude .gitignore
+exclude pytest.ini
+exclude Makefile
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .pytest_cache
+recursive-exclude * *.egg-info
+exclude venv
+exclude packaging_env

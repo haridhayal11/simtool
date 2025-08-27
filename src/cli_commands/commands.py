@@ -31,8 +31,7 @@ class ProjectInitializer:
             # Create directory structure
             directories = [
                 DefaultPaths.RTL_DIR,
-                DefaultPaths.TESTBENCH_COCOTB_DIR,
-                DefaultPaths.TESTBENCH_SV_DIR,
+                DefaultPaths.TESTBENCH_DIR,
                 DefaultPaths.BUILD_DIR,
                 DefaultPaths.SCRIPTS_DIR
             ]
@@ -40,7 +39,7 @@ class ProjectInitializer:
             for dir_name in directories:
                 dir_path = Path(dir_name)
                 if dir_path.exists() and not force:
-                    self.logger.debug(f"Directory already exists: {dir_path}")
+                    pass  # Directory already exists
                 else:
                     dir_path.mkdir(parents=True, exist_ok=True)
                     self.logger.success(f"Created directory: {dir_path}")
@@ -63,16 +62,14 @@ class ProjectInitializer:
         config_file = Path(DefaultPaths.CONFIG_FILE)
         
         if config_file.exists() and not force:
-            self.logger.debug(f"Config file already exists: {config_file}")
-            return
+            return  # Config file already exists
         
         config_content = f"""default_simulator: {simulator}
 default_waves: {str(DefaultConfig.WAVES_ENABLED).lower()}
 rtl_paths: 
   - {DefaultPaths.RTL_DIR}
 tb_paths:
-  - {DefaultPaths.TESTBENCH_COCOTB_DIR}
-  - {DefaultPaths.TESTBENCH_SV_DIR}
+  - {DefaultPaths.TESTBENCH_DIR}
 build_dir: {DefaultPaths.BUILD_DIR}
 include_paths: []
 defines: {{}}

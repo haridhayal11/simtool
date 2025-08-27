@@ -11,14 +11,13 @@ class DefaultPaths:
     
     # Default directories created during project initialization
     RTL_DIR = "rtl"
-    TESTBENCH_COCOTB_DIR = "tb/cocotb"
-    TESTBENCH_SV_DIR = "tb/sv"
+    TESTBENCH_DIR = "tb"
     BUILD_DIR = "work"
     SCRIPTS_DIR = "scripts"
     
     # Default search paths
     DEFAULT_RTL_PATHS = [RTL_DIR]
-    DEFAULT_TB_PATHS = [TESTBENCH_COCOTB_DIR, TESTBENCH_SV_DIR]
+    DEFAULT_TB_PATHS = [TESTBENCH_DIR]
     
     # Configuration file
     CONFIG_FILE = "simtool.cfg"

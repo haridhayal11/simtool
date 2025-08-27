@@ -1,15 +1,26 @@
 # SimTool
 
-A CLI tool that bridges ModelSim workflows to open-source simulation tools like Verilator, cocotb, and GTKWave.
+A modern CLI and GUI tool that bridges ModelSim workflows to open-source simulation tools like Verilator, cocotb, and GTKWave.
 
 ## Features
 
+### Command Line Interface (CLI)
 - **Familiar Commands**: Use ModelSim-style commands (`vlog`, `vcom`, `sim`) 
 - **Auto-Detection**: Automatically detects testbench types (cocotb vs SystemVerilog)
 - **Multiple Simulators**: Support for Verilator (more coming)
 - **Waveform Integration**: Automatic GTKWave integration
 - **SystemC Support**: Co-simulation with SystemC models
-- **Cross-Platform**: Works on Linux and macOS
+
+### Graphical User Interface (GUI) 🆕
+- **Modern Interface**: Light/dark theme support with familiar ModelSim-style layout
+- **File Browser**: Visual project navigation with file selection for compilation
+- **One-Click Operations**: Compile, simulate, and view waves with toolbar buttons
+- **Real-time Feedback**: Live progress updates and colored console output
+- **External Integration**: Launch editors and GTKWave seamlessly
+
+### Cross-Platform Support
+- Works on Linux, macOS, and Windows
+- Consistent behavior across all platforms
 
 ## Installation
 
@@ -28,6 +39,8 @@ pip install -e .
 
 ## Quick Start
 
+### Command Line Interface (CLI)
+
 1. **Initialize a new project**:
 ```bash
 mkdir my_design
@@ -45,6 +58,31 @@ simtool vlog rtl/*.sv --top my_module
 simtool sim my_module --waves
 ```
 
+### Graphical User Interface (GUI)
+
+1. **Launch GUI**:
+```bash
+# From project directory
+./simtool-gui
+
+# Or via Python module
+python3 -m src.gui.main
+
+# Or if installed
+simtool-gui
+```
+
+2. **Use GUI**:
+   - **Open Project**: File → Open Project or create new via File → New Project
+   - **Select Files**: Check/uncheck RTL files in the project tree
+   - **Set Options**: Choose top module, simulator, and enable waveforms
+   - **Compile**: Click "Compile RTL" button
+   - **Simulate**: Click "Run Simulation" button
+   - **View Waves**: Click "View Waves" to launch GTKWave
+
+**GUI Prerequisites**: 
+- Install tkinter if missing: `brew install python-tk` (macOS) or `sudo apt-get install python3-tk` (Ubuntu)
+
 ## Commands
 
 ### `simtool init`
@@ -58,9 +96,7 @@ Creates project structure:
 ```
 project/
 ├── rtl/           # RTL source files
-├── tb/
-│   ├── cocotb/    # Python testbenches  
-│   └── sv/        # SystemVerilog testbenches
+├── tb/            # All testbenches (Python/cocotb, SystemVerilog, C++)
 ├── work/          # Build artifacts (like ModelSim work library)
 ├── scripts/       # Utility scripts
 └── simtool.cfg    # Project configuration
@@ -139,8 +175,7 @@ rtl_paths:
   - rtl
   - src
 tb_paths:
-  - tb/cocotb
-  - tb/sv
+  - tb
 build_dir: work
 include_paths:
   - include

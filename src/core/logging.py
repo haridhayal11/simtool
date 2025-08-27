@@ -6,7 +6,14 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
-from ..ui.colors import Colors
+try:
+    from ..ui.colors import Colors
+except ImportError:
+    # Fallback if relative import fails
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from ui.colors import Colors
 
 
 class ColoredFormatter(logging.Formatter):
@@ -22,9 +29,9 @@ class ColoredFormatter(logging.Formatter):
     
     SYMBOLS = {
         logging.DEBUG: '·',
-        logging.INFO: 'ℹ',
-        logging.WARNING: '⚠',
-        logging.ERROR: '✗',
+        logging.INFO: 'I',
+        logging.WARNING: 'W',
+        logging.ERROR: 'E',
         logging.CRITICAL: '💥',
     }
     
@@ -117,12 +124,12 @@ class SimToolLogger:
     def success(self, message: str, **kwargs):
         """Log success message (info level with success formatting)."""
         # Custom success logging
-        colored_msg = f"{Colors.SUCCESS}✓ {message}{Colors.RESET}"
+        colored_msg = f"{Colors.SUCCESS}{message}{Colors.RESET}"
         self.logger.info(colored_msg, extra={'no_symbol': True, **kwargs})
     
     def progress(self, message: str, **kwargs):
         """Log progress message."""
-        colored_msg = f"{Colors.CYAN}→ {message}{Colors.RESET}"
+        colored_msg = f"{Colors.CYAN}> {message}{Colors.RESET}"
         self.logger.info(colored_msg, extra={'no_symbol': True, **kwargs})
     
     def command(self, message: str, **kwargs):

@@ -5,8 +5,13 @@ SimTool project configuration and management.
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any
-from .validation import ConfigValidator, ConfigValidationError, create_default_config
-from .logging import get_logger
+try:
+    from .validation import ConfigValidator, ConfigValidationError, create_default_config
+    from .logging import get_logger
+except ImportError:
+    # Fallback for absolute imports
+    from validation import ConfigValidator, ConfigValidationError, create_default_config
+    from core.logging import get_logger
 
 
 class Project:
@@ -114,7 +119,20 @@ class Project:
         try:
             with open(file_path, 'r') as f:
                 content = f.read()
-                return '_tb' in file_path.stem or 'module' in content and '_tb' in content
+                # Check for common testbench naming patterns
+                filename_indicators = (
+                    '_tb' in file_path.stem or 
+                    file_path.stem.startswith('test_') or
+                    file_path.stem.endswith('_test')
+                )
+                # Check for testbench patterns in content
+                content_indicators = (
+                    '_tb' in content or
+                    '$dumpfile' in content or
+                    '$dumpvars' in content or
+                    '$finish' in content
+                )
+                return filename_indicators or (('module' in content) and content_indicators)
         except:
             return False
             
