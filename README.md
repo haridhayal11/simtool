@@ -11,7 +11,7 @@ A modern CLI and GUI tool that bridges ModelSim workflows to open-source simulat
 - **Waveform Integration**: Automatic GTKWave integration
 - **SystemC Support**: Co-simulation with SystemC models
 
-### Graphical User Interface (GUI) 🆕
+### Graphical User Interface (GUI)
 - **Modern Interface**: Light/dark theme support with familiar ModelSim-style layout
 - **File Browser**: Visual project navigation with file selection for compilation
 - **One-Click Operations**: Compile, simulate, and view waves with toolbar buttons
@@ -24,6 +24,8 @@ A modern CLI and GUI tool that bridges ModelSim workflows to open-source simulat
 
 ## Installation
 
+### From Source (Development)
+
 ```bash
 # Clone and setup
 git clone <repository-url>
@@ -35,6 +37,16 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install SimTool
 pip install -e .
+```
+
+### From Package (Production)
+
+```bash
+# Build package
+python -m build
+
+# Install from wheel
+pip install dist/*.whl
 ```
 
 ## Quick Start
@@ -62,14 +74,11 @@ simtool sim my_module --waves
 
 1. **Launch GUI**:
 ```bash
-# From project directory
-./simtool-gui
-
-# Or via Python module
-python3 -m src.gui.main
-
-# Or if installed
+# If installed via pip
 simtool-gui
+
+# From development environment
+PYTHONPATH=src python3 -m src.gui.main
 ```
 
 2. **Use GUI**:
@@ -96,11 +105,13 @@ Creates project structure:
 ```
 project/
 ├── rtl/           # RTL source files
-├── tb/            # All testbenches (Python/cocotb, SystemVerilog, C++)
+├── tb/            # Unified testbench directory (Python/cocotb, SystemVerilog, C++)
 ├── work/          # Build artifacts (like ModelSim work library)
 ├── scripts/       # Utility scripts
 └── simtool.cfg    # Project configuration
 ```
+
+**Note**: SimTool uses a unified `tb/` directory for all testbench types.
 
 ### `simtool vlog`
 Compile Verilog/SystemVerilog files (similar to ModelSim's `vlog`).
@@ -233,6 +244,17 @@ pytest tests/
 # Lint code
 flake8 simtool/
 black simtool/
+```
+
+## Packaging and Distribution
+
+```bash
+# Build packages for distribution
+python -m build
+
+# This creates both wheel (.whl) and source (.tar.gz) distributions
+# Output: dist/simtool-0.2.0-py3-none-any.whl
+#         dist/simtool-0.2.0.tar.gz
 ```
 
 ## License

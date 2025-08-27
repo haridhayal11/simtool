@@ -104,14 +104,40 @@ class CompileHandler:
             project = Project()
             
             # Get source files
-            rtl_files = files if files else project.get_rtl_files()
-            if not rtl_files:
-                self.logger.error("No RTL files found")
-                return False
-            
-            # Get testbench files
-            tb_files = project.get_tb_files(tb_type)
-            detected_tb_type = project.detect_testbench_type(tb_files)
+            if files:
+                # User specified files - separate RTL from testbench files
+                rtl_files = []
+                tb_files = []
+                
+                for file in files:
+                    if file.suffix.lower() in ['.sv', '.v', '.vhd']:
+                        # Check if this looks like a testbench based on content or name
+                        if project._is_sv_testbench(file) or 'tb' in file.stem or 'test' in file.stem:
+                            tb_files.append(file)
+                        else:
+                            rtl_files.append(file)
+                    elif file.suffix.lower() == '.py':
+                        if project._is_cocotb_testbench(file):
+                            tb_files.append(file)
+                    elif file.suffix.lower() in ['.cpp', '.c']:
+                        if project._is_cpp_testbench(file):
+                            tb_files.append(file)
+                
+                detected_tb_type = project.detect_testbench_type(tb_files) if tb_files else 'none'
+                
+                if not rtl_files:
+                    self.logger.error("No RTL files found in specified files")
+                    return False
+            else:
+                # No files specified - discover from project
+                rtl_files = project.get_rtl_files()
+                if not rtl_files:
+                    self.logger.error("No RTL files found")
+                    return False
+                
+                # Get testbench files only when auto-discovering
+                tb_files = project.get_tb_files(tb_type)
+                detected_tb_type = project.detect_testbench_type(tb_files)
             
             if verbose:
                 self.logger.info(f"RTL files: {[str(f) for f in rtl_files]}")

@@ -79,10 +79,15 @@ class VerilatorAdapter(ISimulator):
         for file in files:
             cmd_parts.append(str(file))
         
-        # Add testbench if present
+        # Add testbench if present (only for Verilog/SystemVerilog files)
         testbench = kwargs.get('testbench')
         if testbench:
-            cmd_parts.append(str(testbench))
+            testbench_path = Path(testbench)
+            if testbench_path.suffix.lower() in ['.sv', '.v', '.vhd']:
+                cmd_parts.append(str(testbench))
+            else:
+                # Skip non-Verilog testbenches (Python, C++, etc.)
+                pass
         
         # Add generated main.cpp file if using --exe mode
         if waves_enabled and main_cpp_file:

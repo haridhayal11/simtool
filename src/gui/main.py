@@ -177,6 +177,22 @@ class SimToolGUIStandalone:
         self.root = tk.Tk()
         self.root.title("SimTool - Hardware Simulation GUI")
         
+        # Set application name and class (fixes "python" showing in dock/taskbar)
+        try:
+            # Try to set the window class name for better application identification
+            if hasattr(self.root, 'wm_class'):
+                self.root.wm_class("SimTool", "SimTool")
+            # Set application name on macOS
+            try:
+                self.root.tk.call('tk', 'appname', 'SimTool')
+            except tk.TclError:
+                pass  # Not supported on this platform
+        except Exception:
+            pass  # Fallback gracefully if not supported
+        
+        # Set window icon
+        self._set_window_icon()
+        
         # Initialize preferences
         self.preferences = PreferencesManager()
         
@@ -1070,6 +1086,21 @@ Features:
 Built with Python and tkinter"""
         
         messagebox.showinfo("About SimTool", about_text)
+    
+    def _set_window_icon(self):
+        """Set the window icon."""
+        try:
+            # Try to load icon from project root
+            icon_path = Path(__file__).parent.parent.parent / "simtool_icon.png"
+            if icon_path.exists():
+                # Load the icon
+                icon_image = tk.PhotoImage(file=str(icon_path))
+                self.root.iconphoto(False, icon_image)
+                # Keep a reference to prevent garbage collection
+                self._icon_image = icon_image
+        except Exception:
+            # Silently fail if icon can't be loaded
+            pass
     
     def run(self):
         """Run the application."""
