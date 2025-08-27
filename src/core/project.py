@@ -5,6 +5,8 @@ SimTool project configuration and management.
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any
+from .validation import ConfigValidator, ConfigValidationError, create_default_config
+from .logging import get_logger
 
 
 class Project:
@@ -15,12 +17,23 @@ class Project:
         self.config = self._load_config()
         
     def _load_config(self) -> Dict[str, Any]:
-        """Load project configuration from YAML file."""
+        """Load and validate project configuration from YAML file."""
+        logger = get_logger()
+        
         if not self.config_path.exists():
             raise FileNotFoundError(f"Project config not found: {self.config_path}")
-            
-        with open(self.config_path, 'r') as f:
-            return yaml.safe_load(f)
+        
+        try:
+            # Load and validate configuration
+            config = ConfigValidator.validate_yaml_file(self.config_path)
+            logger.debug(f"Configuration loaded and validated from {self.config_path}")
+            return config
+        except ConfigValidationError as e:
+            logger.error(f"Configuration validation failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Error loading configuration: {e}")
+            raise
     
     @property
     def build_dir(self) -> Path:

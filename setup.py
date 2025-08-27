@@ -15,6 +15,10 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/haridhayal11/simtool",
     packages=find_packages(),
+    package_data={
+        'src.toolchain': ['*.sv', '*.cpp'],
+    },
+    include_package_data=True,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -42,6 +46,7 @@ setup(
         "dev": [
             "pytest>=7.0.0",
             "pytest-cov>=4.0.0",
+            "pytest-mock>=3.10.0",
             "black>=22.0.0",
             "flake8>=5.0.0",
         ]
