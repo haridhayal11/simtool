@@ -1,0 +1,1 @@
+"""Core project management and configuration."""

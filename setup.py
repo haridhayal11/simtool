@@ -35,7 +35,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "simtool=simtool.cli:main",
+            "simtool=src.cli:main",
         ],
     },
     extras_require={
