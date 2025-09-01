@@ -72,19 +72,18 @@ def vlog(ctx, files, top, simulator, tb_type, waves):
 
 @main.command()
 @click.argument('module', required=True)
-@click.option('--waves', is_flag=True, help='Enable waveform generation')
 @click.option('--gui', is_flag=True, help='Launch GTKWave GUI')
-@click.option('--time', type=int, help='Maximum simulation time (time units, default: let testbench control)')
+@click.option('--time', type=str, help='Maximum simulation time with units (e.g., 1000ns, 10us, 1ms, default: let testbench control)')
 @click.option('--simulator', help='Override default simulator')
 @click.pass_context
-def sim(ctx, module, waves, gui, time, simulator):
+def sim(ctx, module, gui, time, simulator):
     """Run simulation (similar to ModelSim vsim)."""
     from .cli_commands.commands import SimulationHandler
     
     verbose = ctx.obj['verbose']
     
     handler = SimulationHandler()
-    success = handler.run_simulation(module, waves, gui, time, simulator, verbose)
+    success = handler.run_simulation(module, gui, time, simulator, verbose)
     if not success:
         sys.exit(1)
 

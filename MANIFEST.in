@@ -5,6 +5,9 @@ include pyproject.toml
 include MANIFEST.in
 include simtool_icon.png
 
+# Include icon in source package data
+recursive-include . simtool_icon.png
+
 # Include all source files
 recursive-include src *.py
 recursive-include src *.sv

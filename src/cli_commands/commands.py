@@ -4,6 +4,7 @@ CLI command handlers with separated concerns.
 
 import subprocess
 import shutil
+import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -213,8 +214,8 @@ class SimulationHandler:
     def __init__(self):
         self.logger = get_logger()
     
-    def run_simulation(self, module: str, waves: bool = False, gui: bool = False,
-                      time: Optional[int] = None, simulator: Optional[str] = None,
+    def run_simulation(self, module: str, gui: bool = False,
+                      time: Optional[str] = None, simulator: Optional[str] = None,
                       verbose: bool = False) -> bool:
         """Run simulation of the specified module."""
         try:
@@ -225,19 +226,23 @@ class SimulationHandler:
             sim_name = simulator or project.default_simulator
             sim = self._create_simulator(sim_name, project)
             
-            # Use project default for waves if not specified
-            if not waves and project.default_waves:
-                waves = True
+            # Auto-detect if waves were enabled during compilation
+            waves = self._detect_tracing_enabled(project)
+            
+            # Parse and validate time parameter if provided
+            parsed_time = self._parse_time_parameter(time) if time else None
             
             if verbose:
                 self.logger.info(f"Simulator: {sim_name}")
                 self.logger.info(f"Module: {module}")
                 self.logger.info(f"Waves: {waves}")
                 self.logger.info(f"GUI: {gui}")
+                if parsed_time:
+                    self.logger.info(f"Time: {parsed_time}")
             
             # Run simulation
             self.logger.info(f"Running simulation of {module}...")
-            success = sim.simulate(module, waves=waves, gui=gui, time=time)
+            success = sim.simulate(module, waves=waves, gui=gui, time=parsed_time)
             
             if success:
                 self.logger.success("Simulation completed")
@@ -281,6 +286,85 @@ class SimulationHandler:
                 available_simulators=available,
                 context={'requested_from': 'simulation_handler'}
             )
+    
+    def _detect_tracing_enabled(self, project) -> bool:
+        """Auto-detect if tracing was enabled during compilation."""
+        try:
+            # Method 1: Check project configuration for default waves setting
+            if hasattr(project, 'default_waves') and project.default_waves:
+                return True
+            
+            # Method 2: Look for build artifacts that indicate tracing was enabled
+            build_dir = Path(project.project_path) / 'work'
+            if build_dir.exists():
+                # Check for Verilator trace-related files
+                trace_files = list(build_dir.glob('*trace*')) + list(build_dir.glob('*vcd*'))
+                if trace_files:
+                    return True
+                
+                # Check makefiles for trace flags
+                makefiles = list(build_dir.glob('*.mk'))
+                for makefile in makefiles:
+                    try:
+                        content = makefile.read_text()
+                        if '--trace' in content or 'verilated_vcd' in content:
+                            return True
+                    except:
+                        pass
+            
+            # Method 3: Check for existing waveform files in project directory
+            project_path = Path(project.project_path)
+            wave_files = (list(project_path.glob('*.vcd')) + 
+                         list(project_path.glob('*.fst')) +
+                         list(project_path.glob('*.ghw')))
+            if wave_files:
+                self.logger.info("Found existing waveform files - assuming tracing was enabled")
+                return True
+            
+            # Method 4: Default fallback - assume tracing is available
+            # This is safer than assuming it's not available
+            self.logger.debug("Could not determine tracing status, assuming enabled")
+            return True
+            
+        except Exception as e:
+            self.logger.debug(f"Error detecting tracing: {e}, assuming enabled")
+            return True
+    
+    def _parse_time_parameter(self, time_str: str) -> str:
+        """Parse time parameter with units and return in simulator-compatible format."""
+        if not time_str:
+            return None
+        
+        # Regular expression to match number and optional unit
+        time_pattern = r'^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)$'
+        match = re.match(time_pattern, time_str.strip())
+        
+        if not match:
+            self.logger.warning(f"Invalid time format: {time_str}, expected format: <number><unit> (e.g., 1000ns, 10us, 1ms)")
+            return time_str  # Return as-is and let simulator handle it
+        
+        value, unit = match.groups()
+        unit = unit.lower() if unit else ''
+        
+        # Validate and normalize time units
+        valid_units = {
+            '': 'ns',      # Default to nanoseconds if no unit specified
+            'ps': 'ps',    # picoseconds
+            'ns': 'ns',    # nanoseconds  
+            'us': 'us',    # microseconds
+            'ms': 'ms',    # milliseconds
+            's': 's',      # seconds
+        }
+        
+        if unit not in valid_units:
+            self.logger.warning(f"Unknown time unit '{unit}', supported units: {list(valid_units.keys())}")
+            return time_str  # Return as-is and let simulator handle it
+        
+        # Return formatted time string
+        normalized_unit = valid_units[unit]
+        result = f"{value}{normalized_unit}"
+        self.logger.debug(f"Parsed time parameter: {time_str} -> {result}")
+        return result
 
 
 class CleanupHandler:

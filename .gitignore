@@ -107,3 +107,11 @@ build/
 dist/
 *.egg-info/
 packaging_env/
+
+# Documentation artifacts
+*_SUMMARY.md
+*_ANALYSIS.md
+INSTALL.md
+PACKAGE_SUMMARY.md
+verify_package.py
+install_*.sh

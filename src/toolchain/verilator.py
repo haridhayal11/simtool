@@ -4,6 +4,7 @@ Verilator simulator adapter - calls external verilator commands.
 
 import subprocess
 import shutil
+import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -325,7 +326,45 @@ end
         else:
             logger.warning("GTKWave not found, cannot display waveforms")
     
-    def _generate_main_cpp(self, top_module: str, waves_enabled: bool, sim_time: Optional[int] = None) -> Optional[Path]:
+    def _parse_time_to_numeric(self, time_str: Optional[str]) -> Optional[int]:
+        """Convert time string with units to numeric value in simulation time units."""
+        if not time_str:
+            return None
+        
+        # Regular expression to match number and optional unit
+        time_pattern = r'^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)$'
+        match = re.match(time_pattern, time_str.strip())
+        
+        if not match:
+            logger = get_logger()
+            logger.warning(f"Invalid time format: {time_str}, using default")
+            return None
+        
+        value_str, unit = match.groups()
+        value = float(value_str)
+        unit = unit.lower() if unit else 'ns'  # Default to nanoseconds
+        
+        # Convert to simulation time units (assuming 1ns = 1 simulation time unit)
+        # This is a common Verilator convention
+        time_multipliers = {
+            'ps': 0.001,    # picoseconds
+            'ns': 1,        # nanoseconds (base unit)
+            'us': 1000,     # microseconds
+            'ms': 1000000,  # milliseconds
+            's': 1000000000, # seconds
+        }
+        
+        if unit in time_multipliers:
+            result = int(value * time_multipliers[unit])
+            logger = get_logger()
+            logger.debug(f"Converted time: {time_str} -> {result} simulation time units")
+            return result
+        else:
+            logger = get_logger()
+            logger.warning(f"Unknown time unit '{unit}', assuming nanoseconds")
+            return int(value)
+    
+    def _generate_main_cpp(self, top_module: str, waves_enabled: bool, sim_time: Optional[str] = None) -> Optional[Path]:
         """Generate a C++ main file for transparent VCD tracing."""
         try:
             # Load template
@@ -339,8 +378,9 @@ end
                 template_content = f.read()
             
             # Replace placeholders
-            # Use a large but reasonable default time to let $finish control when no custom time is specified
-            max_sim_time = str(sim_time) if sim_time else "1000000000"  # 1 billion time units
+            # Parse and convert time parameter
+            numeric_time = self._parse_time_to_numeric(sim_time)
+            max_sim_time = str(numeric_time) if numeric_time else "1000000000"  # 1 billion time units default
             main_content = template_content.replace('{TOP_MODULE}', top_module)
             main_content = main_content.replace('{TRACE_FILE}', "simulation")
             main_content = main_content.replace('{MAX_SIM_TIME}', max_sim_time)

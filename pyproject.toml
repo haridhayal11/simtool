@@ -61,6 +61,7 @@ include = ["src*"]
 
 [tool.setuptools.package-data]
 "src.toolchain" = ["*.sv", "*.cpp"]
+"src.gui" = ["simtool_icon.png"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
