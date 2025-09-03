@@ -38,12 +38,28 @@ class VerilatorAdapter(ISimulator):
         waves_enabled = kwargs.get('waves', True)
         self._waves_enabled = waves_enabled
         
-        # Generate main.cpp file if waves are enabled
+        # Store files for later use in simulation
+        self._last_compiled_files = files
+        self._last_testbench = kwargs.get('testbench')
+        
+        # Generate main.cpp file if waves are enabled and no SystemVerilog testbench
         main_cpp_file = None
+        testbench = kwargs.get('testbench')
+        has_sv_testbench = testbench and Path(testbench).suffix.lower() in ['.sv', '.v']
+        
         if waves_enabled:
-            main_cpp_file = self._generate_main_cpp(top_module, waves_enabled)
+            if has_sv_testbench:
+                # Use SystemVerilog testbench as top module
+                logger = get_logger()
+                logger.info(f"Using SystemVerilog testbench as top module: {Path(testbench).stem}")
+            else:
+                # Generate C++ main for RTL-only or non-SV testbenches
+                main_cpp_file = self._generate_main_cpp(top_module, waves_enabled, files=files, testbench=testbench)
         
         # Build basic verilator command
+        # Determine the actual top module (testbench or RTL)
+        actual_top_module = Path(testbench).stem if has_sv_testbench else top_module
+        
         if waves_enabled and main_cpp_file:
             cmd_parts = [
                 self.verilator_path,
@@ -52,7 +68,17 @@ class VerilatorAdapter(ISimulator):
                 '--trace',
                 '--timing',
                 '--Mdir', str(self.build_dir),
-                '--top-module', top_module,
+                '--top-module', actual_top_module,
+            ]
+        elif waves_enabled and has_sv_testbench:
+            # SystemVerilog testbench as top, binary mode
+            cmd_parts = [
+                self.verilator_path,
+                '--binary',
+                '--trace',
+                '--timing',
+                '--Mdir', str(self.build_dir),
+                '--top-module', actual_top_module,
             ]
         else:
             cmd_parts = [
@@ -60,7 +86,7 @@ class VerilatorAdapter(ISimulator):
                 '--binary',
                 '--trace',
                 '--Mdir', str(self.build_dir),
-                '--top-module', top_module,
+                '--top-module', actual_top_module,
             ]
         
         # Add include paths
@@ -110,7 +136,7 @@ class VerilatorAdapter(ISimulator):
             # If using --exe mode, we need to run make to build the executable
             if waves_enabled and main_cpp_file:
                 logger.info("Building executable with make...")
-                make_cmd = ['make', '-C', str(self.build_dir), '-f', f'V{top_module}.mk', f'V{top_module}']
+                make_cmd = ['make', '-C', str(self.build_dir), '-f', f'V{actual_top_module}.mk', f'V{actual_top_module}']
                 make_result = subprocess.run(make_cmd, capture_output=True, text=True, cwd='.')
                 if make_result.returncode != 0:
                     raise CompilationError(f"Make build failed:\n{make_result.stderr}")
@@ -129,18 +155,25 @@ class VerilatorAdapter(ISimulator):
         # Check if we need to regenerate main.cpp with different time limit
         sim_time = kwargs.get('time')
         logger = get_logger()
-        if sim_time and waves:
-            # Regenerate main.cpp with new time limit
-            main_cpp_file = self._generate_main_cpp(top_module, waves, sim_time)
+        testbench = getattr(self, '_last_testbench', None)
+        has_sv_testbench = testbench and Path(testbench).suffix.lower() in ['.sv', '.v']
+        
+        # Determine the actual top module (testbench or RTL)
+        actual_top_module = Path(testbench).stem if has_sv_testbench else top_module
+        
+        if sim_time and waves and not has_sv_testbench:
+            # Regenerate main.cpp with new time limit (only for C++ driven simulations)
+            files = getattr(self, '_last_compiled_files', [])
+            main_cpp_file = self._generate_main_cpp(top_module, waves, sim_time, files, testbench)
             if main_cpp_file:
                 # Rebuild the executable with new time limit
                 logger.info(f"Rebuilding with simulation time limit: {sim_time}")
-                make_cmd = ['make', '-C', str(self.build_dir), '-f', f'V{top_module}.mk', f'V{top_module}']
+                make_cmd = ['make', '-C', str(self.build_dir), '-f', f'V{actual_top_module}.mk', f'V{actual_top_module}']
                 make_result = subprocess.run(make_cmd, capture_output=True, text=True, cwd='.')
                 if make_result.returncode != 0:
                     raise SimulationError(f"Make rebuild failed:\n{make_result.stderr}")
         
-        executable = self.build_dir / f"V{top_module}"
+        executable = self.build_dir / f"V{actual_top_module}"
         
         if not executable.exists():
             raise SimulationError(f"Executable not found: {executable}. Run 'simtool vlog' first.")
@@ -364,7 +397,208 @@ end
             logger.warning(f"Unknown time unit '{unit}', assuming nanoseconds")
             return int(value)
     
-    def _generate_main_cpp(self, top_module: str, waves_enabled: bool, sim_time: Optional[str] = None) -> Optional[Path]:
+    def _analyze_module_signals(self, files: List[Path], top_module: str) -> dict:
+        """Analyze Verilog module to identify clock, reset, and other signals."""
+        import re
+        
+        logger = get_logger()
+        signals = {
+            'clock': None,
+            'reset': None, 
+            'reset_type': 'active_low',  # default
+            'enable': None,
+            'inputs': [],
+            'outputs': []
+        }
+        
+        # Common signal name patterns
+        clock_patterns = [
+            r'\b(clk|clock|CLK|CLOCK)\b',
+        ]
+        reset_patterns = [
+            (r'\b(rst_n|reset_n|resetn|nrst|n_rst)\b', 'active_low'),
+            (r'\b(rst|reset|RST|RESET)\b', 'active_high'),
+        ]
+        enable_patterns = [
+            r'\b(enable|en|ena|EN|ENABLE)\b',
+            r'\b(shift_en|shift_enable|load_en|write_en)\b',
+        ]
+        
+        # Search through all files for the top module definition
+        for file_path in files:
+            if file_path.suffix.lower() not in ['.sv', '.v']:
+                continue
+                
+            try:
+                content = file_path.read_text()
+                
+                # Find the top module definition - handle parameter lists properly
+                module_pattern = rf'module\s+{top_module}\s*(?:#\s*\([^)]*\))?\s*\((.*?)\);'
+                module_match = re.search(module_pattern, content, re.DOTALL | re.IGNORECASE)
+                
+                if not module_match:
+                    continue
+                    
+                port_list = module_match.group(1)
+                logger.info(f"Found module {top_module} in {file_path}")
+                
+                # Remove comments from port list first
+                port_list_clean = re.sub(r'//.*?(?=\n|$)', '', port_list)
+                
+                # Parse port declarations
+                port_lines = [line.strip() for line in port_list_clean.split(',') if line.strip()]
+                
+                for port_line in port_lines:
+                    port_line = port_line.strip()
+                    
+                    # Extract signal names (handle both logic and wire keywords)
+                    # Format: input/output [logic|wire] [width] signal_name
+                    port_match = re.match(r'(input|output)\s+(?:(?:logic|wire)\s+)?(?:\[.*?\]\s+)?(\w+)', port_line, re.IGNORECASE)
+                    if port_match:
+                        direction = port_match.group(1).lower()
+                        signal_name = port_match.group(2)
+                        
+                        if direction == 'input':
+                            signals['inputs'].append(signal_name)
+                            
+                            # Check for clock signals
+                            for pattern in clock_patterns:
+                                if re.search(pattern, signal_name, re.IGNORECASE):
+                                    signals['clock'] = signal_name
+                                    logger.info(f"Detected clock signal: {signal_name}")
+                                    break
+                            
+                            # Check for reset signals  
+                            for pattern, reset_type in reset_patterns:
+                                if re.search(pattern, signal_name, re.IGNORECASE):
+                                    signals['reset'] = signal_name
+                                    signals['reset_type'] = reset_type
+                                    logger.info(f"Detected reset signal: {signal_name} ({reset_type})")
+                                    break
+                            
+                            # Check for enable signals
+                            for pattern in enable_patterns:
+                                if re.search(pattern, signal_name, re.IGNORECASE):
+                                    signals['enable'] = signal_name
+                                    logger.info(f"Detected enable signal: {signal_name}")
+                                    break
+                                    
+                        elif direction == 'output':
+                            signals['outputs'].append(signal_name)
+                
+                break  # Found the module, stop searching
+                
+            except Exception as e:
+                logger.debug(f"Error analyzing {file_path}: {e}")
+                continue
+        
+        return signals
+    
+    def _generate_signal_init_code(self, signal_info: dict) -> str:
+        """Generate C++ initialization code for detected signals."""
+        lines = []
+        
+        # Clock signal initialization
+        if signal_info['clock']:
+            lines.append(f"    top->{signal_info['clock']} = 0; has_clock = true;")
+            lines.append(f'    std::cout << "[SimTool] Found clock: {signal_info['clock']}" << std::endl;')
+        else:
+            lines.append('    std::cout << "[SimTool] Warning: No clock signal detected" << std::endl;')
+        
+        # Reset signal initialization
+        if signal_info['reset']:
+            reset_value = '0' if signal_info['reset_type'] == 'active_low' else '1'
+            lines.append(f"    top->{signal_info['reset']} = {reset_value}; has_reset = true; reset_type = \"{signal_info['reset_type']}\";")
+            lines.append(f'    std::cout << "[SimTool] Found reset: {signal_info['reset']} ({signal_info['reset_type']})" << std::endl;')
+        
+        # Enable signal initialization
+        if signal_info['enable']:
+            lines.append(f"    top->{signal_info['enable']} = 0; has_enable = true;")
+            lines.append(f'    std::cout << "[SimTool] Found enable: {signal_info['enable']}" << std::endl;')
+        
+        return '\n'.join(lines)
+    
+    def _generate_signal_stimulus_code(self, signal_info: dict, time_step: int) -> str:
+        """Generate C++ stimulus code for detected signals."""
+        lines = []
+        
+        # Clock stimulus
+        if signal_info['clock']:
+            lines.append(f"        // Clock generation (10 time unit period)")
+            lines.append(f"        top->{signal_info['clock']} = (main_time / 5) & 1;  // Toggle every 5 time units")
+        
+        # Reset stimulus  
+        if signal_info['reset']:
+            if signal_info['reset_type'] == 'active_low':
+                lines.append(f"        // Reset sequence (active low)")
+                lines.append(f"        if (main_time < 100) {{")
+                lines.append(f"            top->{signal_info['reset']} = 0;  // Assert reset")
+                lines.append(f"        }} else {{")
+                lines.append(f"            top->{signal_info['reset']} = 1;  // Release reset")
+                lines.append(f"        }}")
+            else:
+                lines.append(f"        // Reset sequence (active high)")
+                lines.append(f"        if (main_time < 100) {{")
+                lines.append(f"            top->{signal_info['reset']} = 1;  // Assert reset")
+                lines.append(f"        }} else {{")
+                lines.append(f"            top->{signal_info['reset']} = 0;  // Release reset")
+                lines.append(f"        }}")
+        
+        # Enable stimulus
+        if signal_info['enable']:
+            lines.append(f"        // Enable after reset")
+            lines.append(f"        if (main_time > 150) {{")
+            lines.append(f"            top->{signal_info['enable']} = 1;  // Enable after reset + delay")
+            lines.append(f"        }}")
+        
+        # If no signals detected, provide minimal stimulus
+        if not any([signal_info['clock'], signal_info['reset'], signal_info['enable']]):
+            lines.append("        // No common signals detected - minimal stimulus")
+            lines.append("        // Module may be combinational or have custom signal names")
+        
+        return '\n'.join(lines)
+    
+    def _analyze_testbench_timing(self, files: List[Path]) -> int:
+        """Analyze testbench files to determine appropriate time step."""
+        import re
+        
+        logger = get_logger()
+        time_delays = []
+        
+        # Look for timing delays in SystemVerilog/Verilog files
+        for file_path in files:
+            if file_path.suffix.lower() in ['.sv', '.v']:
+                try:
+                    content = file_path.read_text()
+                    
+                    # Find #<number> patterns (timing delays) - including forever #5
+                    delay_matches = re.findall(r'#(\d+)', content)
+                    for match in delay_matches:
+                        time_delays.append(int(match))
+                    
+                    # Find always blocks with timing
+                    always_matches = re.findall(r'always\s+#(\d+)', content)
+                    for match in always_matches:
+                        time_delays.append(int(match))
+                    
+                    logger.info(f"Found delays in {file_path}: {delay_matches}")
+                        
+                except Exception as e:
+                    logger.debug(f"Could not analyze timing in {file_path}: {e}")
+                    continue
+        
+        # Determine appropriate time step
+        if time_delays:
+            # Use the minimum delay found, or GCD of all delays for better efficiency
+            min_delay = min(time_delays)
+            logger.info(f"Detected timing delays: {time_delays}, using time step: {min_delay}")
+            return min_delay
+        else:
+            # Default time step for testbenches without explicit timing
+            logger.info("No timing delays detected, using default time step: 1")
+            return 1
+
+    def _generate_main_cpp(self, top_module: str, waves_enabled: bool, sim_time: Optional[str] = None, files: Optional[List[Path]] = None, testbench: Optional[str] = None) -> Optional[Path]:
         """Generate a C++ main file for transparent VCD tracing."""
         try:
             # Load template
@@ -377,20 +611,37 @@ end
             with open(template_path, 'r') as f:
                 template_content = f.read()
             
+            # Analyze testbench timing if files provided
+            time_step = 1  # Default
+            all_files = list(files) if files else []
+            if testbench and Path(testbench) not in all_files:
+                all_files.append(Path(testbench))
+            
+            if all_files:
+                time_step = self._analyze_testbench_timing(all_files)
+            
+            # Analyze module signals for generic stimulus generation
+            signal_info = self._analyze_module_signals(all_files, top_module)
+            signal_init_code = self._generate_signal_init_code(signal_info)
+            signal_stimulus_code = self._generate_signal_stimulus_code(signal_info, time_step)
+            
             # Replace placeholders
             # Parse and convert time parameter
             numeric_time = self._parse_time_to_numeric(sim_time)
-            max_sim_time = str(numeric_time) if numeric_time else "1000000000"  # 1 billion time units default
+            max_sim_time = str(numeric_time) if numeric_time else "10000"  # 10K time units default (reasonable for basic stimulus)
             main_content = template_content.replace('{TOP_MODULE}', top_module)
             main_content = main_content.replace('{TRACE_FILE}', "simulation")
             main_content = main_content.replace('{MAX_SIM_TIME}', max_sim_time)
+            main_content = main_content.replace('{TIME_STEP}', str(time_step))
+            main_content = main_content.replace('{SIGNAL_INIT}', signal_init_code)
+            main_content = main_content.replace('{SIGNAL_STIMULUS}', signal_stimulus_code)
             
             # Write generated main.cpp
             main_cpp_path = self.build_dir / 'simtool_main.cpp'
             with open(main_cpp_path, 'w') as f:
                 f.write(main_content)
                 
-            logger.info(f"Generated transparent tracing main: {main_cpp_path}")
+            logger.info(f"Generated transparent tracing main: {main_cpp_path} (time step: {time_step})")
             return main_cpp_path
             
         except Exception as e:

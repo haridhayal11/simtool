@@ -1,23 +1,64 @@
 # SimTool
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg)](https://github.com/haridhayal11/simtool)
+
 A modern CLI and GUI tool that bridges ModelSim workflows to open-source simulation tools like Verilator, cocotb, and GTKWave.
+
+**Perfect for students and engineers transitioning from proprietary ModelSim to open-source EDA tools**
+
+## Screenshots
+
+### GUI Interface
+![SimTool GUI - Main Window](screenshots/gui-main.png)
+
+### Waveform Viewer
+![GTKWave Integration](screenshots/waveforms.png)
 
 ## Features
 
 - **Familiar Commands**: ModelSim-style CLI (`vlog`, `sim`) with automatic testbench detection
 - **Modern GUI**: Visual project management with system native theme
-- **Cross-Platform**: Works on Linux, macOS, and Windows
-- **Multiple Simulators**: Verilator support (more coming soon)
+- **Cross-Platform**: Works on Linux and macOS
+- **Multiple Simulators**: Verilator support (Icarus Verilog, GHDL coming soon)
 - **Integrated Waveforms**: Automatic GTKWave integration
+- **Seamless Migration**: Drop-in replacement for common ModelSim workflows
+- **Project Management**: Organized directory structure with build automation
 
 ## Installation
 
+### Prerequisites
+
+Install the required simulators and tools:
+
 ```bash
-# From source (development)
-git clone <repository-url>
+# macOS
+brew install verilator gtkwave python-tk
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install verilator gtkwave python3-tk python3-pip
+
+# Fedora/CentOS
+sudo dnf install verilator gtkwave python3-tkinter python3-pip
+```
+
+### Install SimTool
+
+```bash
+# Clone and install from source
+git clone https://github.com/haridhayal11/simtool.git
 cd simtool
 pip install -e .
 
+# Verify installation
+simtool doctor
+```
+
+### First Run
+
+```bash
 # Launch GUI
 simtool-gui
 
@@ -66,7 +107,7 @@ my_project/
 
 ## Configuration
 
-Create `simtool.cfg` in your project:
+Creating a new project will create `simtool.cfg` in your project:
 
 ```yaml
 default_simulator: verilator
@@ -86,15 +127,53 @@ build_dir: work
 
 ## Requirements
 
-- Python 3.8+
-- Verilator (simulator)
-- GTKWave (optional, for waveforms)
-- tkinter (for GUI): `brew install python-tk` or `apt install python3-tk`
+### Core Requirements
+- **Python 3.8+** - Programming language runtime
+- **Verilator** - Fast SystemVerilog simulator
+- **tkinter** - GUI framework (usually included with Python)
 
-## Example
+### Optional Tools
+- **GTKWave** - Waveform viewer (highly recommended)
+- **cocotb** - Python testbench framework (auto-installed)
+- **Make** - Build automation (usually pre-installed)
 
-Check `examples/counter/` for a complete example project.
+### Supported Platforms
+- **Linux**: Ubuntu 18.04+, Fedora 30+, CentOS 8+
+- **macOS**: 10.15+ (Intel/Apple Silicon)
+
+## Example Projects
+
+Check out the [`examples/counter/`](https://github.com/haridhayal11/simtool/tree/main/examples/counter) directory for a complete working example with:
+- RTL counter implementation
+- Python cocotb testbench
+- SystemVerilog testbench
+- Complete project setup
+
+## Contributing
+
+Contributions are welcome! Please feel free to:
+- Report bugs and request features via [GitHub Issues](https://github.com/haridhayal11/simtool/issues)
+- Submit pull requests for improvements
+- Share feedback and suggestions
+
+## Support
+
+- **Documentation**: Check the README and example projects
+- **Bug Reports**: [Create an issue](https://github.com/haridhayal11/simtool/issues/new)
+- **Feature Requests**: [Start a discussion](https://github.com/haridhayal11/simtool/discussions)
+
+## Roadmap
+
+- [ ] Support for additional simulators (Icarus Verilog, GHDL)
+- [ ] Formal verification integration
+- [ ] DMA engine support for streaming
+- [ ] Linux driver integration (UIO)
+- [ ] Package distribution via PyPI
 
 ## License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/haridhayal11/simtool/blob/main/LICENSE) file for details.
+
+---
+
+**Star this repo if SimTool helps you transition from ModelSim to open-source tools!**

@@ -352,7 +352,7 @@ class DesignSystem:
             'success': '#008000',
             'error': '#FF0000', 
             'warning': '#FFA500',
-            'info': '#0000FF'
+            'info': '#d1d5db'
         }
         
         if key in status_colors:
@@ -1197,10 +1197,10 @@ class SimToolGUIStandalone:
                 "active_bg": "#b91c1c"
             },
             "tool": {
-                "bg": "#3b82f6",                                # Blue - semantic color
+                "bg": "#6b7280",                                # Grey - semantic color
                 "fg": "#ffffff",                                # Pure white text
-                "hover_bg": "#2563eb",
-                "active_bg": "#1d4ed8"
+                "hover_bg": "#4b5563",
+                "active_bg": "#374151"
             },
             "subtle": {
                 "bg": self.design.get_color('bg_tertiary'),     # High contrast background
@@ -1297,9 +1297,9 @@ class SimToolGUIStandalone:
                 "activeforeground": "#ffffff"
             },
             "tool": {
-                "bg": "#3b82f6",        # Blue semantic color
+                "bg": "#6b7280",        # Grey semantic color
                 "fg": "#ffffff",        # Pure white text
-                "activebackground": "#2563eb",
+                "activebackground": "#4b5563",
                 "activeforeground": "#ffffff"
             }
         }
@@ -2408,8 +2408,8 @@ Built with Python and tkinter"""
         """Update status indicator with color coding."""
         status_colors = {
             "ready": "#28a745",      # Green
-            "compiling": "#007bff",   # Blue
-            "running": "#007bff",     # Blue
+            "compiling": "#d1d5db",   # Light grey
+            "running": "#d1d5db",     # Light grey
             "failed": "#dc3545",      # Red
             "warning": "#ffc107",     # Yellow
             "no_project": "#6c757d"   # Gray
